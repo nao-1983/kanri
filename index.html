@@ -102,6 +102,15 @@
   textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px;min-height:200px}
   .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;z-index:60;font-size:14px;max-width:90vw}
   .empty{color:var(--mute);text-align:center;padding:28px 0}
+  .files{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .fbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font-size:14px;color:var(--ink);text-decoration:none;cursor:pointer}
+  .fbtn.folder{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:700}
+  .fbtn .x{font-size:11px;color:var(--mute);margin-left:4px}
+  #appView{position:fixed;inset:0;z-index:70;background:#fff;display:flex;flex-direction:column}
+  #appView .bar{background:var(--ink);color:#fff;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;border-bottom:3px solid var(--amber)}
+  #appView .bar b{margin-right:auto;font-size:16px}
+  #appView .bar button,#appView .bar a{background:#292524;color:#fff;border:1px solid #57534e;border-radius:8px;padding:8px 12px;font-size:14px;text-decoration:none}
+  #appView iframe{flex:1;border:0;width:100%}
   .note{font-size:13px;color:var(--mute)}
 
   /* print (正書版) */
@@ -164,6 +173,10 @@
         <button class="btn sm amber" id="btnAdd">＋ 追加</button>
       </span>
     </h2>
+    <div class="card">
+      <h2 style="margin-bottom:10px">ファイル <span class="sp"><button class="btn sm sub" id="btnFileAdd">＋ ファイル・リンク</button></span></h2>
+      <div class="files" id="siteFiles"></div>
+    </div>
     <div class="filters">
       <button class="chip on" data-st="open">未完了</button>
       <button class="chip" data-st="all">すべて</button>
@@ -227,6 +240,10 @@
 </main>
 
 <div id="print"></div>
+<div id="appView" class="hidden">
+  <div class="bar"><b id="avTitle"></b><a id="avExt" target="_blank" rel="noopener">別画面で開く</a><button id="avReload">再読込</button><button id="avClose">閉じる ✕</button></div>
+  <iframe id="avFrame" allow="camera; clipboard-read; clipboard-write; fullscreen"></iframe>
+</div>
 <div id="modalRoot"></div>
 
 <script type="module">
@@ -251,18 +268,19 @@ try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
 catch (e) { db = initializeFirestore(app, {}); }
 
 // 自分用データは hub_ で始まるコレクションに保存（在庫データとは分離）
-const C = { sites: "hub_sites", entries: "hub_entries", links: "hub_links", meta: "hub_meta" };
+const C = { sites: "hub_sites", entries: "hub_entries", links: "hub_links", meta: "hub_meta", files: "hub_files" };
+const FILE_KINDS = { "図面": "📐", "Excel・帳票": "📊", "写真": "📷", "書類": "📄", "Goodnotes": "✏️", "その他": "🔗" };
 const TYPES = ["指示", "進捗", "是正", "確認", "メモ"];
 const STATUSES = ["未着手", "対応中", "完了"];
 const SEED_LINKS = [
-  { name: "在庫管理システム", url: "", category: "社内アプリ", note: "全社員共有の在庫管理（Firebase）" },
-  { name: "図面ビューア（zumen-viewer）", url: "", category: "社内アプリ", note: "PDF図面のシンボルに写真を紐付け" },
-  { name: "ケーブルラック S字計算", url: "", category: "社内アプリ", note: "" },
-  { name: "PDF CAD", url: "", category: "社内アプリ", note: "iPad用PDF図面CAD" },
+  { name: "在庫管理システム", url: "", category: "社内アプリ", note: "全社員共有の在庫管理（Firebase）", inApp: true },
+  { name: "図面ビューア（zumen-viewer）", url: "", category: "社内アプリ", note: "PDF図面のシンボルに写真を紐付け", inApp: true },
+  { name: "ケーブルラック S字計算", url: "", category: "社内アプリ", note: "", inApp: true },
+  { name: "PDF CAD", url: "", category: "社内アプリ", note: "iPad用PDF図面CAD", inApp: true },
 ];
 
 // ===== state =====
-let sites = [], entries = [], links = [], items = [], history = [];
+let sites = [], entries = [], links = [], items = [], history = [], files = [];
 let meta = { invSeenAt: 0 };
 let siteId = lsGet("hub_site") || "";
 let view = "home", fSt = "open", fType = "", fQ = "";
@@ -310,6 +328,10 @@ onSnapshot(query(collection(db, C.links), orderBy("order")), (s) => {
     b.commit().catch(fail); return;
   }
   render();
+}, fail);
+
+onSnapshot(collection(db, C.files), (s) => {
+  files = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0)); render();
 }, fail);
 
 onSnapshot(doc(db, C.meta, "settings"), (s) => { meta = { invSeenAt: 0, ...(s.data() || {}) }; render(); }, fail);
@@ -381,6 +403,11 @@ const stat = (l, n, go, alert) => `<div class="stat ${alert ? "alert" : ""}" dat
 function renderSite() {
   const s = curSite();
   $("#siteTitle").textContent = s ? s.name : "現場がありません";
+  const sf = files.filter(f => f.siteId === siteId);
+  $("#siteFiles").innerHTML =
+    (s?.folderUrl ? `<a class="fbtn folder" href="${esc(s.folderUrl)}" target="_blank" rel="noopener">📁 現場フォルダを開く</a>` : "") +
+    sf.map(f => `<span class="fbtn"><a href="${esc(f.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${FILE_KINDS[f.kind] || "🔗"} ${esc(f.name)}</a><button class="x" style="border:0;background:none;cursor:pointer" data-file="${f.id}">編集</button></span>`).join("") +
+    (!s?.folderUrl && !sf.length ? `<span class="note">「現場の編集」でiCloud Driveの現場フォルダのリンクを登録すると、ここから開けます。</span>` : "");
   const ft = $("#fType");
   if (ft.options.length === 1) TYPES.forEach(t => ft.insertAdjacentHTML("beforeend", `<option>${t}</option>`));
   let list = entries.filter(e => e.siteId === siteId);
@@ -440,7 +467,9 @@ const feedHTML = (h, isNew) => `<div class="it ${isNew ? "new" : ""}"><span clas
 function renderLinks() {
   $("#links").innerHTML = links.length ? links.map(l => `<div class="lk">
     <span class="cat">${esc(l.category || "")}</span>
-    ${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>` : `<b>${esc(l.name)}</b><span class="over" style="font-size:12px">URL未登録</span>`}
+    ${!l.url ? `<b>${esc(l.name)}</b><span class="over" style="font-size:12px">URL未登録</span>`
+      : l.inApp ? `<a href="#" data-open="${l.id}">${esc(l.name)} ▶</a>`
+      : `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`}
     ${l.note ? `<span class="nt">${esc(l.note)}</span>` : ""}
     <button class="ed" data-link="${l.id}">編集</button></div>`).join("")
     : `<div class="empty">まだ登録がありません</div>`;
@@ -502,6 +531,7 @@ function siteModal(s) {
   modal(`<h3>${isNew ? "現場を追加" : "現場の編集"}</h3>
     <div class="fr"><label>現場名</label><input id="sName" value="${esc(s.name)}" placeholder="例：○○ビル 電気設備工事"></div>
     <div class="fr"><label>メモ（工事内容・元請など）</label><textarea id="sNote" rows="3">${esc(s.note)}</textarea></div>
+    <div class="fr"><label>現場フォルダのリンク（iCloud Driveの共有リンク）</label><input id="sFolder" type="url" value="${esc(s.folderUrl)}" placeholder="https://www.icloud.com/iclouddrive/…"></div>
     ${isNew ? "" : `<div class="fr"><label><input type="checkbox" id="sArch" ${s.archived ? "checked" : ""} style="width:auto"> 完了した現場にする（一覧から隠す）</label></div>`}
     <div class="mf"><button class="btn sub" id="sCancel">キャンセル</button><button class="btn" id="sSave">保存</button></div>`,
   (ov, close) => {
@@ -509,7 +539,7 @@ function siteModal(s) {
     ov.querySelector("#sSave").onclick = async () => {
       const name = ov.querySelector("#sName").value.trim();
       if (!name) return toast("現場名を入力してください");
-      const d = { name, note: ov.querySelector("#sNote").value.trim() };
+      const d = { name, note: ov.querySelector("#sNote").value.trim(), folderUrl: ov.querySelector("#sFolder").value.trim() };
       try {
         if (isNew) {
           const r = await addDoc(collection(db, C.sites), { ...d, archived: false, order: Date.now(), createdAt: Date.now() });
@@ -546,13 +576,15 @@ function linkModal(l) {
     <div class="fr"><label>分類</label><input id="lCat" value="${esc(l.category || "社内アプリ")}" list="cats">
       <datalist id="cats"><option>社内アプリ</option><option>個人用アプリ</option><option>図面</option><option>Excel・帳票</option><option>資料</option></datalist></div>
     <div class="fr"><label>メモ</label><input id="lNote" value="${esc(l.note)}"></div>
+    <div class="fr"><label><input type="checkbox" id="lInApp" ${l.inApp !== false ? "checked" : ""} style="width:auto"> 管理アプリの中で開く（自分で作ったアプリ向け）</label></div>
     <div class="mf">${isNew ? "" : `<button class="btn danger l" id="lDel">削除</button>`}
       <button class="btn sub" id="lCancel">キャンセル</button><button class="btn" id="lSave">保存</button></div>`,
   (ov, close) => {
     ov.querySelector("#lCancel").onclick = close;
     ov.querySelector("#lSave").onclick = async () => {
       const d = { name: ov.querySelector("#lName").value.trim(), url: ov.querySelector("#lUrl").value.trim(),
-        category: ov.querySelector("#lCat").value.trim(), note: ov.querySelector("#lNote").value.trim() };
+        category: ov.querySelector("#lCat").value.trim(), note: ov.querySelector("#lNote").value.trim(),
+        inApp: ov.querySelector("#lInApp").checked };
       if (!d.name) return toast("名前を入力してください");
       try {
         if (isNew) await addDoc(collection(db, C.links), { ...d, order: Date.now(), createdAt: Date.now() });
@@ -566,6 +598,46 @@ function linkModal(l) {
     };
   });
 }
+
+function fileModal(f) {
+  if (!curSite()) return toast("先に現場を追加してください");
+  const isNew = !f; f = f || { kind: "図面" };
+  modal(`<h3>${isNew ? "ファイル・リンクを追加" : "ファイル・リンクを編集"}<span class="note" style="font-weight:400">　${esc(curSite().name)}</span></h3>
+    <div class="fr"><label>表示名</label><input id="fName" value="${esc(f.name)}" placeholder="例：リパワリングレイアウト図"></div>
+    <div class="fr"><label>リンク（iCloud Driveの共有リンクなど）</label><input id="fUrl" type="url" value="${esc(f.url)}" placeholder="https://"></div>
+    <div class="fr2">
+      <div class="fr"><label>種類</label><select id="fKind">${Object.keys(FILE_KINDS).map(k => `<option ${k === f.kind ? "selected" : ""}>${k}</option>`).join("")}</select></div>
+      <div class="fr"><label>メモ</label><input id="fNote" value="${esc(f.note)}"></div>
+    </div>
+    <div class="mf">${isNew ? "" : `<button class="btn danger l" id="fDel">削除</button>`}
+      <button class="btn sub" id="fCancel">キャンセル</button><button class="btn" id="fSave">保存</button></div>`,
+  (ov, close) => {
+    ov.querySelector("#fCancel").onclick = close;
+    ov.querySelector("#fSave").onclick = async () => {
+      const d = { name: ov.querySelector("#fName").value.trim(), url: ov.querySelector("#fUrl").value.trim(),
+        kind: ov.querySelector("#fKind").value, note: ov.querySelector("#fNote").value.trim() };
+      if (!d.name || !d.url) return toast("表示名とリンクを入力してください");
+      try {
+        if (isNew) await addDoc(collection(db, C.files), { ...d, siteId, order: Date.now(), createdAt: Date.now() });
+        else await updateDoc(doc(db, C.files, f.id), d);
+        close();
+      } catch (err) { fail(err); }
+    };
+    if (!isNew) ov.querySelector("#fDel").onclick = async () => {
+      if (!confirm("このリンクを削除しますか？（ファイル本体は消えません）")) return;
+      await deleteDoc(doc(db, C.files, f.id)).catch(fail); close();
+    };
+  });
+}
+
+function openApp(l) {
+  $("#avTitle").textContent = l.name;
+  $("#avExt").href = l.url;
+  $("#avFrame").src = l.url;
+  $("#appView").classList.remove("hidden");
+}
+$("#avClose").onclick = () => { $("#appView").classList.add("hidden"); $("#avFrame").src = "about:blank"; };
+$("#avReload").onclick = () => { const f = $("#avFrame"); const u = f.src; f.src = "about:blank"; setTimeout(() => f.src = u, 50); };
 
 // ===== import / export / print =====
 async function doImport() {
@@ -624,7 +696,7 @@ function doPrint() {
 }
 
 function doExport() {
-  const data = { exportedAt: new Date().toISOString(), sites, entries, links };
+  const data = { exportedAt: new Date().toISOString(), sites, entries, links, files };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
   a.download = `業務管理_バックアップ_${today()}.json`; a.click();
@@ -646,8 +718,10 @@ $("#siteSel").onchange = (e) => {
   siteId = v; lsSet("hub_site", v); render();
 };
 document.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-go],[data-site],[data-edit],[data-cycle],[data-link],[data-st]");
+  const t = e.target.closest("[data-go],[data-site],[data-edit],[data-cycle],[data-link],[data-st],[data-open],[data-file]");
   if (!t) return;
+  if (t.dataset.open) { e.preventDefault(); return openApp(links.find(x => x.id === t.dataset.open)); }
+  if (t.dataset.file) return fileModal(files.find(x => x.id === t.dataset.file));
   if (t.dataset.site) { siteId = t.dataset.site; lsSet("hub_site", siteId); renderSiteSel(); return go("site"); }
   if (t.dataset.go) return go(t.dataset.go);
   if (t.dataset.edit) return entryModal(entries.find(x => x.id === t.dataset.edit));
@@ -666,6 +740,7 @@ $("#fQ").oninput = (e) => { fQ = e.target.value; renderSite(); };
 $("#btnAdd").onclick = () => entryModal();
 $("#btnSiteEdit").onclick = () => curSite() ? siteModal(curSite()) : siteModal();
 $("#btnLinkAdd").onclick = () => linkModal();
+$("#btnFileAdd").onclick = () => fileModal();
 $("#btnSeen").onclick = () => setDoc(doc(db, C.meta, "settings"), { invSeenAt: Date.now() }, { merge: true }).then(() => toast("確認済みにしました")).catch(fail);
 $("#btnImport").onclick = doImport;
 $("#btnPaste").onclick = async () => { try { $("#impText").value = await navigator.clipboard.readText(); } catch { toast("長押しして貼り付けてください"); } };
