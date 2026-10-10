@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="管理">
+<meta name="theme-color" content="#1c1917">
+<title>業務管理</title>
+<style>
+  :root{
+    --ink:#1c1917; --ink2:#44403c; --mute:#78716c; --line:#d6d3d1; --bg:#f5f5f4; --card:#fff;
+    --amber:#f59e0b; --amber-d:#b45309; --red:#dc2626; --red-bg:#fef2f2; --green:#16a34a; --green-bg:#f0fdf4;
+    --blue:#2563eb; --blue-bg:#eff6ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;font-size:16px}
+  body{padding-bottom:env(safe-area-inset-bottom)}
+  button,input,select,textarea{font:inherit;color:inherit}
+  .hidden{display:none!important}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:var(--ink);color:#fafaf9;
+    border-bottom:4px solid var(--amber);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px}
+  .hrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand{font-weight:800;font-size:20px;letter-spacing:.02em;margin-right:auto}
+  .brand small{display:block;font-size:11px;color:#a8a29e;font-weight:500;letter-spacing:.1em}
+  .sync{font-size:12px;color:#a8a29e}
+  .site-sel{background:#292524;color:#fafaf9;border:1px solid #57534e;border-radius:8px;padding:10px 12px;min-width:220px;max-width:100%}
+  nav{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
+  nav button{flex:0 0 auto;background:transparent;border:0;color:#d6d3d1;padding:10px 16px;border-radius:8px 8px 0 0;font-weight:700;position:relative}
+  nav button.on{background:var(--bg);color:var(--ink)}
+  .badge{display:inline-block;min-width:20px;padding:1px 6px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;margin-left:6px;text-align:center}
+
+  main{padding:16px;max-width:1100px;margin:0 auto}
+  h2{font-size:18px;margin:4px 0 12px;display:flex;align-items:center;gap:10px}
+  h2 .sp{margin-left:auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer}
+  .stat .n{font-size:30px;font-weight:800;line-height:1.1}
+  .stat .l{font-size:13px;color:var(--mute)}
+  .stat.alert{border-color:var(--red);background:var(--red-bg)} .stat.alert .n{color:var(--red)}
+
+  .btn{border:2px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+  .btn.sub{background:#fff;color:var(--ink)}
+  .btn.amber{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+  .btn.sm{padding:6px 12px;font-size:14px}
+  .btn.danger{background:#fff;color:var(--red);border-color:var(--red)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 14px;font-size:14px;cursor:pointer}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .search{flex:1;min-width:180px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:#fff}
+
+  .day{font-weight:800;color:var(--ink2);margin:18px 0 8px;font-size:14px;border-bottom:2px solid var(--line);padding-bottom:4px}
+  .entry{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
+  .entry .body{flex:1;min-width:0;cursor:pointer}
+  .entry .t{font-weight:700}
+  .entry .d{color:var(--ink2);font-size:14px;white-space:pre-wrap;margin-top:4px}
+  .entry .meta{font-size:12px;color:var(--mute);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+  .entry.done{opacity:.6} .entry.done .t{text-decoration:line-through}
+  .type{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:#e7e5e4;white-space:nowrap}
+  .type.指示{background:#fef3c7;color:#92400e} .type.是正{background:var(--red-bg);color:var(--red)}
+  .type.進捗{background:var(--blue-bg);color:var(--blue)} .type.確認{background:var(--green-bg);color:var(--green)}
+  .st{border:2px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;min-width:84px;cursor:pointer}
+  .st.未着手{border-color:var(--red);color:var(--red)} .st.対応中{border-color:var(--amber);color:var(--amber-d)}
+  .st.完了{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+  .over{color:var(--red);font-weight:700}
+
+  table.inv{width:100%;border-collapse:collapse;font-size:14px}
+  table.inv th,table.inv td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+  table.inv th{font-size:12px;color:var(--mute)}
+  .low{color:var(--red);font-weight:800}
+  .feed .it{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;display:flex;gap:10px}
+  .feed .it.new{background:#fffbeb}
+  .feed .tm{color:var(--mute);font-size:12px;white-space:nowrap;min-width:120px}
+  .act{font-weight:700;min-width:36px} .act.出庫{color:var(--red)} .act.入庫{color:var(--green)}
+
+  .links{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .lk{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .lk a{font-weight:800;font-size:16px;color:var(--ink);text-decoration:none}
+  .lk .cat{font-size:12px;color:var(--amber-d);font-weight:700}
+  .lk .nt{font-size:13px;color:var(--mute)}
+  .lk .ed{align-self:flex-end;font-size:12px;color:var(--mute);background:none;border:0;cursor:pointer;text-decoration:underline}
+
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+  @media(min-width:700px){.ov{align-items:center}}
+  .modal{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:20px}
+  @media(min-width:700px){.modal{border-radius:16px}}
+  .modal h3{margin:0 0 14px;font-size:18px}
+  .fr{margin-bottom:12px} .fr label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px}
+  .fr input,.fr select,.fr textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
+  .fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  .mf .l{margin-right:auto}
+  textarea.code{font-family:ui-monospace,Menlo,monospace;font-size:13px;min-height:200px}
+  .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;z-index:60;font-size:14px;max-width:90vw}
+  .empty{color:var(--mute);text-align:center;padding:28px 0}
+  .note{font-size:13px;color:var(--mute)}
+
+  /* print (正書版) */
+  #print{display:none}
+  @media print{
+    @page{size:A4;margin:14mm}
+    body{background:#fff}
+    header,main,.ov,.toast{display:none!important}
+    #print{display:block;color:#000;font-size:10.5pt}
+    #print h1{font-size:16pt;text-align:center;margin:0 0 4mm;letter-spacing:.3em}
+    #print .ph{display:flex;justify-content:space-between;border-bottom:1.5pt solid #000;padding-bottom:2mm;margin-bottom:4mm}
+    #print table{width:100%;border-collapse:collapse;table-layout:fixed}
+    #print th,#print td{border:.6pt solid #000;padding:1.6mm 2mm;vertical-align:top}
+    #print th{background:#eee;font-size:9pt}
+    #print td.c{text-align:center;white-space:nowrap}
+    #print .sign{display:flex;justify-content:flex-end;margin-top:6mm}
+    #print .sign div{border:.6pt solid #000;width:22mm;height:20mm;font-size:8pt;text-align:center;padding-top:1mm}
+    #print .sum{margin:3mm 0;font-size:9.5pt}
+    #print tr{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="brand">業務管理<small>WORK HUB</small></div>
+    <select id="siteSel" class="site-sel"></select>
+    <span class="sync" id="sync">接続中…</span>
+  </div>
+  <nav id="nav">
+    <button data-v="home" class="on">ホーム</button>
+    <button data-v="site">現場<span id="bSite" class="badge hidden"></span></button>
+    <button data-v="inv">在庫<span id="bInv" class="badge hidden"></span></button>
+    <button data-v="apps">アプリ・ファイル</button>
+    <button data-v="tools">取込・出力</button>
+  </nav>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="v-home">
+    <h2>今日の状況 <span class="note" id="today"></span></h2>
+    <div class="grid" id="homeStats"></div>
+    <div class="card" style="margin-top:14px">
+      <h2>期限切れ・今日まで <span class="sp"></span></h2>
+      <div id="homeDue"></div>
+    </div>
+    <div class="card">
+      <h2>在庫の動き（未確認）<span class="sp"><button class="btn sm sub" data-go="inv">在庫を開く</button></span></h2>
+      <div id="homeInv"></div>
+    </div>
+  </section>
+
+  <!-- SITE -->
+  <section id="v-site" class="hidden">
+    <h2><span id="siteTitle">現場</span>
+      <span class="sp btns">
+        <button class="btn sm sub" id="btnSiteEdit">現場の編集</button>
+        <button class="btn sm amber" id="btnAdd">＋ 追加</button>
+      </span>
+    </h2>
+    <div class="filters">
+      <button class="chip on" data-st="open">未完了</button>
+      <button class="chip" data-st="all">すべて</button>
+      <button class="chip" data-st="完了">完了</button>
+      <select class="chip" id="fType"><option value="">種別：すべて</option></select>
+      <input class="search" id="fQ" placeholder="検索（件名・内容・場所）">
+    </div>
+    <div id="entries"></div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section id="v-inv" class="hidden">
+    <h2>在庫の監視 <span class="sp btns"><button class="btn sm amber" id="btnSeen">すべて確認済みにする</button></span></h2>
+    <div class="grid" id="invStats" style="margin-bottom:14px"></div>
+    <div class="card">
+      <h2>最低在庫を下回っている品目</h2>
+      <div id="invLow"></div>
+    </div>
+    <div class="card">
+      <h2>入出庫の履歴 <span class="note">（黄色＝前回確認以降）</span></h2>
+      <div class="feed" id="invFeed"></div>
+    </div>
+    <p class="note">在庫管理アプリのデータをそのまま読み取っています（このアプリから在庫は変更しません）。</p>
+  </section>
+
+  <!-- APPS -->
+  <section id="v-apps" class="hidden">
+    <h2>アプリ・ファイル一覧 <span class="sp"><button class="btn sm amber" id="btnLinkAdd">＋ 追加</button></span></h2>
+    <div class="links" id="links"></div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="v-tools" class="hidden">
+    <div class="card">
+      <h2>Claudeから取り込む</h2>
+      <p class="note">GoodnotesのページをClaudeに送り「管理アプリ用に取り込みデータを作って」と頼むと、下に貼り付ける文字列が返ってきます。貼り付けて「取り込む」を押すと、選択中の現場に追加されます。</p>
+      <div class="fr"><textarea id="impText" class="code" placeholder='{"entries":[{"date":"2026-10-11","type":"指示","title":"…","detail":"…"}]}'></textarea></div>
+      <div class="btns"><button class="btn amber" id="btnImport">取り込む</button><button class="btn sub" id="btnPaste">クリップボードから貼り付け</button></div>
+    </div>
+    <div class="card">
+      <h2>正書版（日報・指示事項一覧）を作る</h2>
+      <p class="note">印刷画面で「PDFとして保存」または共有から「Goodnotes」を選ぶと、清書版をGoodnotesに保存できます。</p>
+      <div class="fr2">
+        <div class="fr"><label>開始日</label><input type="date" id="prFrom"></div>
+        <div class="fr"><label>終了日</label><input type="date" id="prTo"></div>
+      </div>
+      <div class="fr2">
+        <div class="fr"><label>対象</label>
+          <select id="prSt"><option value="all">すべて</option><option value="open">未完了のみ</option></select></div>
+        <div class="fr"><label>表題</label>
+          <select id="prTitle"><option>作業日報</option><option>指示事項一覧</option><option>進捗報告書</option></select></div>
+      </div>
+      <button class="btn" id="btnPrint">正書版を表示・印刷</button>
+    </div>
+    <div class="card">
+      <h2>バックアップ</h2>
+      <p class="note">全データ（現場・記録・リンク）をファイルに書き出します。</p>
+      <button class="btn sub" id="btnExport">バックアップを書き出す</button>
+    </div>
+  </section>
+</main>
+
+<div id="print"></div>
+<div id="modalRoot"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeFirestore, persistentLocalCache, collection, doc, onSnapshot, addDoc, updateDoc,
+  deleteDoc, setDoc, query, orderBy, limit, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ===== Firebase（在庫管理アプリと同じプロジェクト）=====
+const firebaseConfig = {
+  apiKey: "AIzaSyCLRsGq3B2UO0biK8Ba529noCS09-e7aIM",
+  authDomain: "zaiko-kanri-da727.firebaseapp.com",
+  projectId: "zaiko-kanri-da727",
+  storageBucket: "zaiko-kanri-da727.firebasestorage.app",
+  messagingSenderId: "267149234206",
+  appId: "1:267149234206:web:9b579fbe192af8be3bde0f"
+};
+const app = initializeApp(firebaseConfig);
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
+catch (e) { db = initializeFirestore(app, {}); }
+
+// 自分用データは hub_ で始まるコレクションに保存（在庫データとは分離）
+const C = { sites: "hub_sites", entries: "hub_entries", links: "hub_links", meta: "hub_meta" };
+const TYPES = ["指示", "進捗", "是正", "確認", "メモ"];
+const STATUSES = ["未着手", "対応中", "完了"];
+const SEED_LINKS = [
+  { name: "在庫管理システム", url: "", category: "社内アプリ", note: "全社員共有の在庫管理（Firebase）" },
+  { name: "図面ビューア（zumen-viewer）", url: "", category: "社内アプリ", note: "PDF図面のシンボルに写真を紐付け" },
+  { name: "ケーブルラック S字計算", url: "", category: "社内アプリ", note: "" },
+  { name: "PDF CAD", url: "", category: "社内アプリ", note: "iPad用PDF図面CAD" },
+];
+
+// ===== state =====
+let sites = [], entries = [], links = [], items = [], history = [];
+let meta = { invSeenAt: 0 };
+let siteId = lsGet("hub_site") || "";
+let view = "home", fSt = "open", fType = "", fQ = "";
+let seeded = { sites: false, links: false };
+
+// ===== utils =====
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function today() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+function fmtDate(s) { if (!s) return ""; const [y, m, d] = s.split("-"); const w = "日月火水木金土"[new Date(s + "T00:00").getDay()]; return `${y}/${+m}/${+d}（${w}）`; }
+function fmtTime(ms) { return ms ? new Date(ms).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""; }
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+function fail(e) { console.error(e); toast("エラー：" + (e.code === "permission-denied" ? "Firestoreのルール設定が必要です" : e.message)); }
+const curSite = () => sites.find(s => s.id === siteId);
+const isLow = (i) => (i.minStock || 0) > 0 && (i.quantity || 0) <= i.minStock;
+
+// ===== subscriptions =====
+function setSync(ok) { $("#sync").textContent = ok ? "🟢 同期中" : "🔴 接続エラー"; }
+
+onSnapshot(query(collection(db, C.sites), orderBy("order")), (s) => {
+  sites = s.docs.map(d => ({ id: d.id, ...d.data() }));
+  setSync(true);
+  if (!sites.length && !seeded.sites && !s.metadata.fromCache) {
+    seeded.sites = true;
+    addDoc(collection(db, C.sites), { name: "桑原城メガソーラー No.4", note: "リパワリング", order: 1, archived: false, createdAt: Date.now() }).catch(fail);
+    return;
+  }
+  const active = sites.filter(x => !x.archived);
+  if (!sites.find(x => x.id === siteId) && active.length) { siteId = active[0].id; lsSet("hub_site", siteId); }
+  renderSiteSel(); render();
+}, (e) => { setSync(false); fail(e); });
+
+onSnapshot(collection(db, C.entries), (s) => {
+  entries = s.docs.map(d => ({ id: d.id, ...d.data() })); render();
+}, fail);
+
+onSnapshot(query(collection(db, C.links), orderBy("order")), (s) => {
+  links = s.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!links.length && !seeded.links && !s.metadata.fromCache) {
+    seeded.links = true;
+    const b = writeBatch(db);
+    SEED_LINKS.forEach((l, i) => b.set(doc(collection(db, C.links)), { ...l, order: i + 1, createdAt: Date.now() }));
+    b.commit().catch(fail); return;
+  }
+  render();
+}, fail);
+
+onSnapshot(doc(db, C.meta, "settings"), (s) => { meta = { invSeenAt: 0, ...(s.data() || {}) }; render(); }, fail);
+
+// 在庫管理アプリのデータ（読み取りのみ）
+onSnapshot(collection(db, "items"), (s) => { items = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, (e) => console.warn(e));
+let firstHist = true;
+onSnapshot(query(collection(db, "history"), orderBy("createdAt", "desc"), limit(200)), (s) => {
+  const prevTop = history[0]?.createdAt || 0;
+  history = s.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!firstHist) {
+    const fresh = history.filter(h => h.createdAt > prevTop);
+    if (fresh.length) toast(`在庫の動き：${fresh[0].action} ${fresh[0].itemName} ${fresh[0].detail || ""}`);
+  }
+  firstHist = false; render();
+}, (e) => console.warn(e));
+
+// ===== render =====
+function renderSiteSel() {
+  const sel = $("#siteSel");
+  const opts = sites.filter(s => !s.archived).map(s => `<option value="${s.id}">${esc(s.name)}</option>`);
+  opts.push(`<option value="__new">＋ 現場を追加…</option>`);
+  if (sites.some(s => s.archived)) opts.push(`<option value="__arch">完了した現場を表示…</option>`);
+  sel.innerHTML = opts.join(""); sel.value = siteId;
+}
+
+function render() {
+  const unseen = history.filter(h => h.createdAt > (meta.invSeenAt || 0));
+  const low = items.filter(isLow);
+  const invBadge = unseen.length + (low.length ? 0 : 0);
+  $("#bInv").textContent = unseen.length > 99 ? "99+" : unseen.length;
+  $("#bInv").classList.toggle("hidden", !invBadge);
+  const open = entries.filter(e => e.siteId === siteId && e.status !== "完了");
+  $("#bSite").textContent = open.length; $("#bSite").classList.toggle("hidden", !open.length);
+  try { if (navigator.setAppBadge) (unseen.length ? navigator.setAppBadge(unseen.length) : navigator.clearAppBadge()); } catch {}
+
+  if (view === "home") renderHome(unseen, low);
+  if (view === "site") renderSite();
+  if (view === "inv") renderInv(unseen, low);
+  if (view === "apps") renderLinks();
+}
+
+function renderHome(unseen, low) {
+  const t = today();
+  $("#today").textContent = fmtDate(t);
+  const act = sites.filter(s => !s.archived);
+  const openAll = entries.filter(e => e.status !== "完了" && act.some(s => s.id === e.siteId));
+  const overdue = openAll.filter(e => e.due && e.due <= t);
+  const todayAdded = entries.filter(e => e.date === t);
+  $("#homeStats").innerHTML = [
+    stat("未完了の指示・課題", openAll.length, "site", false),
+    stat("期限切れ・今日まで", overdue.length, "site", overdue.length > 0),
+    stat("今日の記録", todayAdded.length, "site", false),
+    stat("在庫不足の品目", low.length, "inv", low.length > 0),
+    stat("未確認の在庫の動き", unseen.length, "inv", false),
+  ].join("") + act.map(s => {
+    const n = entries.filter(e => e.siteId === s.id && e.status !== "完了").length;
+    return `<div class="stat" data-site="${s.id}"><div class="n">${n}</div><div class="l">${esc(s.name)}（未完了）</div></div>`;
+  }).join("");
+  $("#homeDue").innerHTML = overdue.length
+    ? overdue.sort((a, b) => a.due.localeCompare(b.due)).map(e => entryHTML(e, true)).join("")
+    : `<div class="empty">期限切れの項目はありません</div>`;
+  $("#homeInv").innerHTML = unseen.length
+    ? `<div class="feed">${unseen.slice(0, 8).map(h => feedHTML(h, true)).join("")}</div>${unseen.length > 8 ? `<p class="note">ほか ${unseen.length - 8} 件</p>` : ""}`
+    : `<div class="empty">前回の確認以降、在庫の動きはありません</div>`;
+}
+const stat = (l, n, go, alert) => `<div class="stat ${alert ? "alert" : ""}" data-go="${go}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+
+function renderSite() {
+  const s = curSite();
+  $("#siteTitle").textContent = s ? s.name : "現場がありません";
+  const ft = $("#fType");
+  if (ft.options.length === 1) TYPES.forEach(t => ft.insertAdjacentHTML("beforeend", `<option>${t}</option>`));
+  let list = entries.filter(e => e.siteId === siteId);
+  if (fSt === "open") list = list.filter(e => e.status !== "完了");
+  else if (fSt === "完了") list = list.filter(e => e.status === "完了");
+  if (fType) list = list.filter(e => e.type === fType);
+  if (fQ) { const q = fQ.toLowerCase(); list = list.filter(e => [e.title, e.detail, e.ref].join(" ").toLowerCase().includes(q)); }
+  list.sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || 0) - (a.createdAt || 0));
+  if (!list.length) { $("#entries").innerHTML = `<div class="empty">該当する記録はありません。「＋ 追加」から登録できます。</div>`; return; }
+  let html = "", last = null;
+  for (const e of list) {
+    if (e.date !== last) { html += `<div class="day">${fmtDate(e.date) || "日付なし"}</div>`; last = e.date; }
+    html += entryHTML(e, false);
+  }
+  $("#entries").innerHTML = html;
+}
+
+function entryHTML(e, showSite) {
+  const t = today();
+  const over = e.due && e.status !== "完了" && e.due <= t;
+  const siteName = showSite ? (sites.find(s => s.id === e.siteId)?.name || "") : "";
+  return `<div class="entry ${e.status === "完了" ? "done" : ""}">
+    <span class="type ${esc(e.type)}">${esc(e.type || "メモ")}</span>
+    <div class="body" data-edit="${e.id}">
+      <div class="t">${esc(e.title)}</div>
+      ${e.detail ? `<div class="d">${esc(e.detail)}</div>` : ""}
+      <div class="meta">
+        ${siteName ? `<span>📍${esc(siteName)}</span>` : ""}
+        ${e.ref ? `<span>場所：${esc(e.ref)}</span>` : ""}
+        ${e.due ? `<span class="${over ? "over" : ""}">期限：${fmtDate(e.due)}</span>` : ""}
+        ${e.status === "完了" && e.doneAt ? `<span>完了：${fmtTime(e.doneAt)}</span>` : ""}
+      </div>
+    </div>
+    <button class="st ${esc(e.status)}" data-cycle="${e.id}">${esc(e.status || "未着手")}</button>
+  </div>`;
+}
+
+function renderInv(unseen, low) {
+  const outs = history.filter(h => h.action === "出庫" && h.createdAt > Date.now() - 7 * 864e5).length;
+  $("#invStats").innerHTML = [
+    stat("登録品目", items.length, "inv", false),
+    stat("在庫不足", low.length, "inv", low.length > 0),
+    stat("未確認の動き", unseen.length, "inv", false),
+    stat("直近7日の出庫回数", outs, "inv", false),
+  ].join("");
+  $("#invLow").innerHTML = low.length ? `<table class="inv"><tr><th>品名</th><th>規格</th><th>分類</th><th>現在</th><th>最低</th><th>場所</th></tr>${
+    low.sort((a, b) => (a.quantity / a.minStock) - (b.quantity / b.minStock)).map(i => `<tr>
+      <td><b>${esc(i.name)}</b></td><td>${esc(i.spec || i.size || "")}</td><td>${esc(i.category)}</td>
+      <td class="low">${i.quantity ?? 0}${esc(i.unit || "")}</td><td>${i.minStock}${esc(i.unit || "")}</td><td>${esc(i.location || "")}</td></tr>`).join("")}</table>`
+    : `<div class="empty">最低在庫を下回っている品目はありません</div>`;
+  $("#invFeed").innerHTML = history.length ? history.slice(0, 100).map(h => feedHTML(h, h.createdAt > (meta.invSeenAt || 0))).join("") : `<div class="empty">履歴がありません</div>`;
+}
+const feedHTML = (h, isNew) => `<div class="it ${isNew ? "new" : ""}"><span class="tm">${fmtTime(h.createdAt)}</span>
+  <span class="act ${esc(h.action)}">${esc(h.action)}</span><span style="flex:1"><b>${esc(h.itemName)}</b> ${esc(h.detail || "")}</span>
+  <span class="note">${esc(h.user || "")}</span></div>`;
+
+function renderLinks() {
+  $("#links").innerHTML = links.length ? links.map(l => `<div class="lk">
+    <span class="cat">${esc(l.category || "")}</span>
+    ${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>` : `<b>${esc(l.name)}</b><span class="over" style="font-size:12px">URL未登録</span>`}
+    ${l.note ? `<span class="nt">${esc(l.note)}</span>` : ""}
+    <button class="ed" data-link="${l.id}">編集</button></div>`).join("")
+    : `<div class="empty">まだ登録がありません</div>`;
+}
+
+// ===== modals =====
+function modal(html, onMount) {
+  const root = $("#modalRoot");
+  root.innerHTML = `<div class="ov"><div class="modal">${html}</div></div>`;
+  const ov = root.firstElementChild;
+  ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+  function close() { root.innerHTML = ""; }
+  onMount(ov, close);
+}
+
+function entryModal(e) {
+  if (!curSite()) return toast("先に現場を追加してください");
+  const isNew = !e; e = e || { date: today(), type: "指示", status: "未着手" };
+  modal(`<h3>${isNew ? "記録を追加" : "記録を編集"}<span class="note" style="font-weight:400">　${esc(curSite().name)}</span></h3>
+    <div class="fr2">
+      <div class="fr"><label>日付</label><input type="date" id="mDate" value="${esc(e.date)}"></div>
+      <div class="fr"><label>種別</label><select id="mType">${TYPES.map(t => `<option ${t === e.type ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+    </div>
+    <div class="fr"><label>件名</label><input id="mTitle" value="${esc(e.title)}" placeholder="例：B列 既設杭カット"></div>
+    <div class="fr"><label>内容</label><textarea id="mDetail" rows="4">${esc(e.detail)}</textarea></div>
+    <div class="fr"><label>場所・図面・番号</label><input id="mRef" value="${esc(e.ref)}" placeholder="例：リパワリングレイアウト B1〜B82"></div>
+    <div class="fr2">
+      <div class="fr"><label>期限</label><input type="date" id="mDue" value="${esc(e.due)}"></div>
+      <div class="fr"><label>状態</label><select id="mSt">${STATUSES.map(s => `<option ${s === e.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+    </div>
+    <div class="mf">${isNew ? "" : `<button class="btn danger l" id="mDel">削除</button>`}
+      <button class="btn sub" id="mCancel">キャンセル</button><button class="btn" id="mSave">保存</button></div>`,
+  (ov, close) => {
+    ov.querySelector("#mCancel").onclick = close;
+    ov.querySelector("#mSave").onclick = async () => {
+      const d = {
+        date: ov.querySelector("#mDate").value, type: ov.querySelector("#mType").value,
+        title: ov.querySelector("#mTitle").value.trim(), detail: ov.querySelector("#mDetail").value.trim(),
+        ref: ov.querySelector("#mRef").value.trim(), due: ov.querySelector("#mDue").value,
+        status: ov.querySelector("#mSt").value, updatedAt: Date.now()
+      };
+      if (!d.title) return toast("件名を入力してください");
+      if (d.status === "完了" && e.status !== "完了") d.doneAt = Date.now();
+      try {
+        if (isNew) await addDoc(collection(db, C.entries), { ...d, siteId, createdAt: Date.now() });
+        else await updateDoc(doc(db, C.entries, e.id), d);
+        close(); toast("保存しました");
+      } catch (err) { fail(err); }
+    };
+    if (!isNew) ov.querySelector("#mDel").onclick = async () => {
+      if (!confirm("この記録を削除しますか？")) return;
+      try { await deleteDoc(doc(db, C.entries, e.id)); close(); toast("削除しました"); } catch (err) { fail(err); }
+    };
+  });
+}
+
+function siteModal(s) {
+  const isNew = !s; s = s || {};
+  modal(`<h3>${isNew ? "現場を追加" : "現場の編集"}</h3>
+    <div class="fr"><label>現場名</label><input id="sName" value="${esc(s.name)}" placeholder="例：○○ビル 電気設備工事"></div>
+    <div class="fr"><label>メモ（工事内容・元請など）</label><textarea id="sNote" rows="3">${esc(s.note)}</textarea></div>
+    ${isNew ? "" : `<div class="fr"><label><input type="checkbox" id="sArch" ${s.archived ? "checked" : ""} style="width:auto"> 完了した現場にする（一覧から隠す）</label></div>`}
+    <div class="mf"><button class="btn sub" id="sCancel">キャンセル</button><button class="btn" id="sSave">保存</button></div>`,
+  (ov, close) => {
+    ov.querySelector("#sCancel").onclick = () => { close(); renderSiteSel(); };
+    ov.querySelector("#sSave").onclick = async () => {
+      const name = ov.querySelector("#sName").value.trim();
+      if (!name) return toast("現場名を入力してください");
+      const d = { name, note: ov.querySelector("#sNote").value.trim() };
+      try {
+        if (isNew) {
+          const r = await addDoc(collection(db, C.sites), { ...d, archived: false, order: Date.now(), createdAt: Date.now() });
+          siteId = r.id; lsSet("hub_site", siteId);
+        } else {
+          d.archived = ov.querySelector("#sArch").checked;
+          await updateDoc(doc(db, C.sites, s.id), d);
+        }
+        close(); toast("保存しました");
+      } catch (err) { fail(err); }
+    };
+  });
+}
+
+function archModal() {
+  const arch = sites.filter(s => s.archived);
+  modal(`<h3>完了した現場</h3>${arch.map(s => `<div class="entry"><div class="body"><div class="t">${esc(s.name)}</div><div class="d">${esc(s.note || "")}</div></div>
+    <button class="btn sm sub" data-restore="${s.id}">元に戻す</button></div>`).join("")}
+    <div class="mf"><button class="btn sub" id="aClose">閉じる</button></div>`,
+  (ov, close) => {
+    ov.querySelector("#aClose").onclick = () => { close(); renderSiteSel(); };
+    ov.querySelectorAll("[data-restore]").forEach(b => b.onclick = async () => {
+      await updateDoc(doc(db, C.sites, b.dataset.restore), { archived: false }).catch(fail);
+      siteId = b.dataset.restore; lsSet("hub_site", siteId); close();
+    });
+  });
+}
+
+function linkModal(l) {
+  const isNew = !l; l = l || {};
+  modal(`<h3>${isNew ? "リンクを追加" : "リンクを編集"}</h3>
+    <div class="fr"><label>名前</label><input id="lName" value="${esc(l.name)}"></div>
+    <div class="fr"><label>URL（アプリのアドレスや共有フォルダのリンク）</label><input id="lUrl" type="url" value="${esc(l.url)}" placeholder="https://"></div>
+    <div class="fr"><label>分類</label><input id="lCat" value="${esc(l.category || "社内アプリ")}" list="cats">
+      <datalist id="cats"><option>社内アプリ</option><option>個人用アプリ</option><option>図面</option><option>Excel・帳票</option><option>資料</option></datalist></div>
+    <div class="fr"><label>メモ</label><input id="lNote" value="${esc(l.note)}"></div>
+    <div class="mf">${isNew ? "" : `<button class="btn danger l" id="lDel">削除</button>`}
+      <button class="btn sub" id="lCancel">キャンセル</button><button class="btn" id="lSave">保存</button></div>`,
+  (ov, close) => {
+    ov.querySelector("#lCancel").onclick = close;
+    ov.querySelector("#lSave").onclick = async () => {
+      const d = { name: ov.querySelector("#lName").value.trim(), url: ov.querySelector("#lUrl").value.trim(),
+        category: ov.querySelector("#lCat").value.trim(), note: ov.querySelector("#lNote").value.trim() };
+      if (!d.name) return toast("名前を入力してください");
+      try {
+        if (isNew) await addDoc(collection(db, C.links), { ...d, order: Date.now(), createdAt: Date.now() });
+        else await updateDoc(doc(db, C.links, l.id), d);
+        close();
+      } catch (err) { fail(err); }
+    };
+    if (!isNew) ov.querySelector("#lDel").onclick = async () => {
+      if (!confirm("このリンクを削除しますか？")) return;
+      await deleteDoc(doc(db, C.links, l.id)).catch(fail); close();
+    };
+  });
+}
+
+// ===== import / export / print =====
+async function doImport() {
+  let raw = $("#impText").value.trim();
+  if (!raw) return toast("貼り付けてください");
+  raw = raw.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+  let data;
+  try { data = JSON.parse(raw); } catch { return toast("形式が正しくありません（Claudeが出した文字列をそのまま貼ってください）"); }
+  const list = Array.isArray(data) ? data : (data.entries || []);
+  if (!list.length) return toast("取り込む項目がありません");
+  let target = siteId;
+  if (data.site) {
+    const hit = sites.find(s => s.name === data.site);
+    if (hit) target = hit.id;
+    else if (confirm(`現場「${data.site}」がありません。新しく追加しますか？\n（キャンセル＝選択中の現場に入れる）`)) {
+      const r = await addDoc(collection(db, C.sites), { name: data.site, note: "", archived: false, order: Date.now(), createdAt: Date.now() });
+      target = r.id;
+    }
+  }
+  if (!target) return toast("先に現場を追加してください");
+  const name = sites.find(s => s.id === target)?.name || data.site;
+  if (!confirm(`「${name}」に ${list.length} 件を取り込みます。よろしいですか？`)) return;
+  try {
+    for (let i = 0; i < list.length; i += 400) {
+      const b = writeBatch(db);
+      list.slice(i, i + 400).forEach(x => b.set(doc(collection(db, C.entries)), {
+        siteId: target, date: x.date || today(), type: TYPES.includes(x.type) ? x.type : "メモ",
+        title: String(x.title || "").slice(0, 200), detail: String(x.detail || ""), ref: String(x.ref || ""),
+        due: x.due || "", status: STATUSES.includes(x.status) ? x.status : "未着手",
+        source: "Claude取込", createdAt: Date.now(), updatedAt: Date.now()
+      }));
+      await b.commit();
+    }
+    $("#impText").value = ""; siteId = target; lsSet("hub_site", siteId); renderSiteSel();
+    toast(`${list.length} 件を取り込みました`); go("site");
+  } catch (e) { fail(e); }
+}
+
+function doPrint() {
+  const s = curSite(); if (!s) return toast("現場を選んでください");
+  const from = $("#prFrom").value, to = $("#prTo").value, st = $("#prSt").value, title = $("#prTitle").value;
+  let list = entries.filter(e => e.siteId === siteId && (!from || e.date >= from) && (!to || e.date <= to));
+  if (st === "open") list = list.filter(e => e.status !== "完了");
+  list.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || 0) - (b.createdAt || 0));
+  const cnt = (k) => list.filter(e => e.status === k).length;
+  const period = from || to ? `${from ? fmtDate(from) : ""} 〜 ${to ? fmtDate(to) : ""}` : "全期間";
+  $("#print").innerHTML = `<h1>${esc(title)}</h1>
+    <div class="ph"><div>工事名：<b>${esc(s.name)}</b>${s.note ? `<br>${esc(s.note)}` : ""}</div><div style="text-align:right">対象期間：${period}<br>作成日：${fmtDate(today())}</div></div>
+    <div class="sum">件数 ${list.length}件（未着手 ${cnt("未着手")}／対応中 ${cnt("対応中")}／完了 ${cnt("完了")}）</div>
+    <table><thead><tr><th style="width:9mm">No</th><th style="width:27mm">日付</th><th style="width:12mm">種別</th><th>件名・内容</th><th style="width:32mm">場所・図面</th><th style="width:27mm">期限</th><th style="width:15mm">状態</th></tr></thead>
+    <tbody>${list.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="c">${fmtDate(e.date)}</td><td class="c">${esc(e.type)}</td>
+      <td><b>${esc(e.title)}</b>${e.detail ? `<br>${esc(e.detail).replace(/\n/g, "<br>")}` : ""}</td><td>${esc(e.ref)}</td>
+      <td class="c">${e.due ? fmtDate(e.due) : ""}</td><td class="c">${esc(e.status)}</td></tr>`).join("") || `<tr><td colspan="7" class="c">記録なし</td></tr>`}</tbody></table>
+    <div class="sign"><div>確認</div><div>作成</div></div>`;
+  setTimeout(() => window.print(), 50);
+}
+
+function doExport() {
+  const data = { exportedAt: new Date().toISOString(), sites, entries, links };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `業務管理_バックアップ_${today()}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ===== events =====
+function go(v) {
+  view = v;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + v));
+  window.scrollTo(0, 0); render();
+}
+$("#nav").onclick = (e) => { const b = e.target.closest("button"); if (b) go(b.dataset.v); };
+$("#siteSel").onchange = (e) => {
+  const v = e.target.value;
+  if (v === "__new") return siteModal();
+  if (v === "__arch") return archModal();
+  siteId = v; lsSet("hub_site", v); render();
+};
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-go],[data-site],[data-edit],[data-cycle],[data-link],[data-st]");
+  if (!t) return;
+  if (t.dataset.site) { siteId = t.dataset.site; lsSet("hub_site", siteId); renderSiteSel(); return go("site"); }
+  if (t.dataset.go) return go(t.dataset.go);
+  if (t.dataset.edit) return entryModal(entries.find(x => x.id === t.dataset.edit));
+  if (t.dataset.link) return linkModal(links.find(x => x.id === t.dataset.link));
+  if (t.dataset.st) { fSt = t.dataset.st; document.querySelectorAll("[data-st]").forEach(c => c.classList.toggle("on", c === t)); return renderSite(); }
+  if (t.dataset.cycle) {
+    const en = entries.find(x => x.id === t.dataset.cycle);
+    const next = STATUSES[(STATUSES.indexOf(en.status) + 1) % STATUSES.length];
+    const d = { status: next, updatedAt: Date.now() };
+    if (next === "完了") d.doneAt = Date.now();
+    updateDoc(doc(db, C.entries, en.id), d).catch(fail);
+  }
+});
+$("#fType").onchange = (e) => { fType = e.target.value; renderSite(); };
+$("#fQ").oninput = (e) => { fQ = e.target.value; renderSite(); };
+$("#btnAdd").onclick = () => entryModal();
+$("#btnSiteEdit").onclick = () => curSite() ? siteModal(curSite()) : siteModal();
+$("#btnLinkAdd").onclick = () => linkModal();
+$("#btnSeen").onclick = () => setDoc(doc(db, C.meta, "settings"), { invSeenAt: Date.now() }, { merge: true }).then(() => toast("確認済みにしました")).catch(fail);
+$("#btnImport").onclick = doImport;
+$("#btnPaste").onclick = async () => { try { $("#impText").value = await navigator.clipboard.readText(); } catch { toast("長押しして貼り付けてください"); } };
+$("#btnPrint").onclick = doPrint;
+$("#btnExport").onclick = doExport;
+$("#prFrom").value = today(); $("#prTo").value = today();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>
