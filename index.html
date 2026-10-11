@@ -170,8 +170,9 @@
   <section id="v-site" class="hidden">
     <h2><span id="siteTitle">現場</span>
       <span class="sp btns">
-        <button class="btn sm sub" id="btnSiteEdit">現場の編集</button>
-        <button class="btn sm amber" id="btnAdd">＋ 追加</button>
+        <button class="btn sm sub" id="btnSiteNew">＋ 現場を追加</button>
+        <button class="btn sm sub" id="btnSiteEdit">この現場を編集</button>
+        <button class="btn sm amber" id="btnAdd">＋ 記録を追加</button>
       </span>
     </h2>
     <div class="card">
@@ -550,7 +551,8 @@ function entryModal(e) {
 
 function siteModal(s) {
   const isNew = !s; s = s || {};
-  modal(`<h3>${isNew ? "現場を追加" : "現場の編集"}</h3>
+  modal(`<h3>${isNew ? "新しい現場を追加" : "この現場を編集"}</h3>
+    ${isNew ? "" : `<p class="note" style="margin-top:-6px">※ここで名前を変えると「${esc(s.name)}」が書き換わります。別の現場を増やす時は「＋ 現場を追加」を使ってください。</p>`}
     <div class="fr"><label>現場名</label><input id="sName" value="${esc(s.name)}" placeholder="例：○○ビル 電気設備工事"></div>
     <div class="fr"><label>メモ（工事内容・元請など）</label><textarea id="sNote" rows="3">${esc(s.note)}</textarea></div>
     <div class="fr"><label>現場フォルダ（iCloud Drive内の場所）</label><input id="sFolder" value="${esc(s.folderUrl ? (s.folderUrl.startsWith(ICLOUD) ? safeDecode(s.folderUrl.slice(ICLOUD.length)) : s.folderUrl) : "")}" placeholder="例：業務/桑原城メガソーラーNo.4">
@@ -765,6 +767,7 @@ $("#fType").onchange = (e) => { fType = e.target.value; renderSite(); };
 $("#fQ").oninput = (e) => { fQ = e.target.value; renderSite(); };
 $("#btnAdd").onclick = () => entryModal();
 $("#btnSiteEdit").onclick = () => curSite() ? siteModal(curSite()) : siteModal();
+$("#btnSiteNew").onclick = () => siteModal();
 $("#btnLinkAdd").onclick = () => linkModal();
 $("#btnFileAdd").onclick = () => fileModal();
 $("#btnSeen").onclick = () => setDoc(doc(db, C.meta, "settings"), { invSeenAt: Date.now() }, { merge: true }).then(() => toast("確認済みにしました")).catch(fail);
