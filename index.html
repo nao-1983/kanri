@@ -138,6 +138,7 @@
 <header>
   <div class="hrow">
     <div class="brand">業務管理<small>WORK HUB</small></div>
+    <a id="rootBtn" class="fbtn" style="background:#292524;color:#fafaf9;border-color:#57534e">📁 業務フォルダ</a>
     <select id="siteSel" class="site-sel"></select>
     <span class="sync" id="sync">接続中…</span>
   </div>
@@ -232,6 +233,11 @@
       <button class="btn" id="btnPrint">正書版を表示・印刷</button>
     </div>
     <div class="card">
+      <h2>設定</h2>
+      <div class="fr"><label>業務フォルダの場所（iCloud Drive内）</label><input id="cfgRoot" placeholder="業務"></div>
+      <div class="btns"><button class="btn sub" id="btnCfgSave">保存</button><button class="btn sub" id="btnCfgTest">開いて確認</button></div>
+    </div>
+    <div class="card">
       <h2>バックアップ</h2>
       <p class="note">全データ（現場・記録・リンク）をファイルに書き出します。</p>
       <button class="btn sub" id="btnExport">バックアップを書き出す</button>
@@ -281,7 +287,7 @@ const SEED_LINKS = [
 
 // ===== state =====
 let sites = [], entries = [], links = [], items = [], history = [], files = [];
-let meta = { invSeenAt: 0 };
+let meta = { invSeenAt: 0, rootFolder: "業務" };
 let siteId = lsGet("hub_site") || "";
 let view = "home", fSt = "open", fType = "", fQ = "";
 let seeded = { sites: false, links: false };
@@ -305,6 +311,7 @@ function toLink(v) {
   if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return v;
   return ICLOUD + v.replace(/^\/+|\/+$/g, "").split("/").map(encodeURIComponent).join("/");
 }
+document.getElementById("rootBtn").href = toLink("業務");
 function safeDecode(s) { try { return decodeURIComponent(s); } catch { return s; } }
 const linkAttrs = (v) => { const u = toLink(v); return /^https?:/i.test(u) ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(u)}"`; };
 const isLow = (i) => (i.minStock || 0) > 0 && (i.quantity || 0) <= i.minStock;
@@ -344,7 +351,12 @@ onSnapshot(collection(db, C.files), (s) => {
   files = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0)); render();
 }, fail);
 
-onSnapshot(doc(db, C.meta, "settings"), (s) => { meta = { invSeenAt: 0, ...(s.data() || {}) }; render(); }, fail);
+onSnapshot(doc(db, C.meta, "settings"), (s) => {
+  meta = { invSeenAt: 0, rootFolder: "業務", ...(s.data() || {}) };
+  $("#rootBtn").href = toLink(meta.rootFolder || "業務");
+  if (document.activeElement !== $("#cfgRoot")) $("#cfgRoot").value = meta.rootFolder || "業務";
+  render();
+}, fail);
 
 // 在庫管理アプリのデータ（読み取りのみ）
 onSnapshot(collection(db, "items"), (s) => { items = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, (e) => console.warn(e));
@@ -760,6 +772,8 @@ $("#btnImport").onclick = doImport;
 $("#btnPaste").onclick = async () => { try { $("#impText").value = await navigator.clipboard.readText(); } catch { toast("長押しして貼り付けてください"); } };
 $("#btnPrint").onclick = doPrint;
 $("#btnExport").onclick = doExport;
+$("#btnCfgSave").onclick = () => setDoc(doc(db, C.meta, "settings"), { rootFolder: $("#cfgRoot").value.trim() || "業務" }, { merge: true }).then(() => toast("保存しました")).catch(fail);
+$("#btnCfgTest").onclick = () => { location.href = toLink($("#cfgRoot").value.trim() || "業務"); };
 $("#prFrom").value = today(); $("#prTo").value = today();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
 </script>
